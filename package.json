@@ -1,0 +1,17 @@
+{
+  "name": "com.maemi.unity-uitoolkit-extensions",
+  "version": "0.1.0",
+  "displayName": "Unity UIToolkit Extensions",
+  "description": "Reusable UI Toolkit VisualElement extension helpers for Unity.",
+  "unity": "6000.0",
+  "dependencies": {},
+  "keywords": [
+    "ui-toolkit",
+    "visual-element",
+    "extensions"
+  ],
+  "author": {
+    "name": "Maemi"
+  },
+  "license": "MIT"
+}
