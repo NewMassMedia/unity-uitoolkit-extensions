@@ -16,5 +16,5 @@ Reusable UI Toolkit `VisualElement` extension helpers for Unity.
 ## Notes
 
 - Namespace: `Core.UI.Extensions`
-- Assembly: `Core.UI.Extensions.Runtime`
+- Assembly: `Core.UI.Extensions`
 - This package is intended to stay focused on lightweight `VisualElement` helper APIs.

@@ -1,5 +1,5 @@
 {
-    "name": "Core.UI.Extensions.Runtime",
+    "name": "Core.UI.Extensions",
     "rootNamespace": "Core.UI.Extensions",
     "references": [],
     "includePlatforms": [],
