@@ -73,5 +73,6 @@ namespace Core.UI.Extensions
         public static T RemoveClass<T>(this T element, string className) where T : VisualElement { element.RemoveFromClassList(className); return element; }
         public static T ClearClass<T>(this T element) where T : VisualElement { element.ClearClassList(); return element; }
         public static T EnableClass<T>(this T element, string className, bool enable) where T : VisualElement { element.EnableInClassList(className, enable); return element; }
+        public static T ToggleClass<T>(this T element, string className) where T : VisualElement { element.ToggleInClassList(className); return element; }
     }
 }
