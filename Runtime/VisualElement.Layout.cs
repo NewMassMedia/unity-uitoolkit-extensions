@@ -116,6 +116,8 @@ namespace Core.UI.Extensions
         public static StyleLength GetMaxWidthStyle<T>(this T element) where T : VisualElement => element.style.maxWidth;
         public static float GetMaxWidth(this VisualElement element) => element.style.maxWidth.value.value;
         public static T SetWidth<T>(this T element, float value) where T : VisualElement { element.style.width = value; return element; }
+        public static T SetWidth<T>(this T element, Length value) where T : VisualElement { element.style.width = value; return element; }
+        public static T SetWidth<T>(this T element, StyleKeyword value) where T : VisualElement { element.style.width = value; return element; }
         public static T SetMinWidth<T>(this T element, float value) where T : VisualElement { element.style.minWidth = value; return element; }
         public static T SetMaxWidth<T>(this T element, float value) where T : VisualElement { element.style.maxWidth = value; return element; }
         public static StyleLength GetHeightStyle<T>(this T element) where T : VisualElement => element.style.height;
@@ -125,6 +127,7 @@ namespace Core.UI.Extensions
         public static StyleLength GetMaxHeightStyle<T>(this T element) where T : VisualElement => element.style.maxHeight;
         public static float GetMaxHeight(this VisualElement element) => element.style.maxHeight.value.value;
         public static T SetHeight<T>(this T element, float value) where T : VisualElement { element.style.height = value; return element; }
+        public static T SetHeight<T>(this T element, Length value) where T : VisualElement { element.style.height = value; return element; }
         public static T SetHeight<T>(this T element, StyleKeyword value) where T : VisualElement { element.style.height = value; return element; }
         public static T SetMinHeight<T>(this T element, float value) where T : VisualElement { element.style.minHeight = value; return element; }
         public static T SetMaxHeight<T>(this T element, float value) where T : VisualElement { element.style.maxHeight = value; return element; }
