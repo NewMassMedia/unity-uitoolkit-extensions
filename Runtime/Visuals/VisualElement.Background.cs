@@ -19,5 +19,6 @@ namespace Core.UI.Extensions
         public static T SetBackgroundSize<T>(this T element, float widthPercent, float heightPercent) where T : VisualElement { element.style.backgroundSize = new BackgroundSize(Length.Percent(widthPercent), Length.Percent(heightPercent)); return element; }
         public static T SetBackgroundPositionX<T>(this T element, float pixelOffset) where T : VisualElement { element.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, new Length(pixelOffset, LengthUnit.Pixel)); return element; }
         public static T SetBackgroundPositionY<T>(this T element, float pixelOffset) where T : VisualElement { element.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, new Length(pixelOffset, LengthUnit.Pixel)); return element; }
+        public static T SetBackgroundRepeat<T>(this T element, Repeat repeat) where T : VisualElement { element.style.backgroundRepeat = new BackgroundRepeat(repeat, repeat); return element; }
     }
 }
