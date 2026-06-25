@@ -16,5 +16,8 @@ namespace Core.UI.Extensions
         public static T SetBackgroundTintColor<T>(this T element, Color value) where T : VisualElement { element.style.unityBackgroundImageTintColor = value; return element; }
         public static T SetBackgroundSize<T>(this T element, BackgroundSizeType value) where T : VisualElement { element.style.backgroundSize = new BackgroundSize(value); return element; }
         public static T SetBackgroundRepeat<T>(this T element, BackgroundRepeat value) where T : VisualElement { element.style.backgroundRepeat = value; return element; }
+        public static T SetBackgroundSize<T>(this T element, float widthPercent, float heightPercent) where T : VisualElement { element.style.backgroundSize = new BackgroundSize(Length.Percent(widthPercent), Length.Percent(heightPercent)); return element; }
+        public static T SetBackgroundPositionX<T>(this T element, float pixelOffset) where T : VisualElement { element.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, new Length(pixelOffset, LengthUnit.Pixel)); return element; }
+        public static T SetBackgroundPositionY<T>(this T element, float pixelOffset) where T : VisualElement { element.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, new Length(pixelOffset, LengthUnit.Pixel)); return element; }
     }
 }

@@ -14,5 +14,7 @@ namespace Core.UI.Extensions
         public static T SetTranslate<T>(this T element, Translate value) where T : VisualElement { element.style.translate = new StyleTranslate(value); return element; }
         public static T SetScale<T>(this T element, Vector2 value) where T : VisualElement { element.style.scale = value; return element; }
         public static T SetRotate<T>(this T element, float value) where T : VisualElement { element.style.rotate = new Rotate(new Angle(value)); return element; }
+        public static T SetScale<T>(this T element, float uniform) where T : VisualElement { return element.SetScale(new Vector2(uniform, uniform)); }
+        public static T SetTranslatePercent<T>(this T element, float xPercent, float yPercent) where T : VisualElement { element.style.translate = new Translate(Length.Percent(xPercent), Length.Percent(yPercent)); return element; }
     }
 }
