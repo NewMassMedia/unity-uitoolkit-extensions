@@ -1,6 +1,6 @@
 {
   "name": "com.maemi.unity-uitoolkit-extensions",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "displayName": "Unity UIToolkit Extensions",
   "description": "Reusable UI Toolkit VisualElement extension helpers for Unity.",
   "unity": "6000.0",
