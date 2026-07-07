@@ -10,6 +10,11 @@ Reusable UI Toolkit `VisualElement` extension helpers for Unity.
 - `VisualElement.Query`
 - `VisualElement.Hierarchy`
 - `VisualElement.Bounds`
+- `VisualElement.Anchoring`
+- `VisualElement.Animation` — Easing, Tween, rotation/class scheduling
+- `VisualElement.Rendering` — dashed border, gradient background
+- `VisualElement.Transition` — fade/slide/scale enter-exit
+- `RectFitUtility`, `RectResizeUtility` — pure Rect geometry
 - `Callback/Callback.*`
 - `Visuals/VisualElement.*`
 
