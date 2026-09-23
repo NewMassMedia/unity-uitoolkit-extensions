@@ -12,6 +12,7 @@ namespace Core.UI.Extensions
         public static T SetFontStyleAndWeight<T>(this T element, FontStyle value) where T : VisualElement { element.style.unityFontStyleAndWeight = value; return element; }
         public static T SetWhiteSpace<T>(this T element, WhiteSpace whiteSpace) where T : VisualElement { element.style.whiteSpace = whiteSpace; return element; }
         public static T SetTextOverflow<T>(this T element, TextOverflow textOverflow) where T : VisualElement { element.style.textOverflow = textOverflow; return element; }
+        public static T SetTextOverflowPosition<T>(this T element, TextOverflowPosition value) where T : VisualElement { element.style.unityTextOverflowPosition = value; return element; }
         public static T SetTextAlign<T>(this T element, TextAnchor value) where T : VisualElement { element.style.unityTextAlign = value; return element; }
         public static T SetTextColor<T>(this T element, Color value) where T : VisualElement { element.style.color = value; return element; }
         public static T SetTextColor<T>(this T element, StyleKeyword value) where T : VisualElement { element.style.color = value; return element; }
