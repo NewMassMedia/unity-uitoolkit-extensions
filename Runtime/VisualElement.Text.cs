@@ -21,7 +21,7 @@ namespace Core.UI.Extensions
         public static T SetIsReadonly<T>(this T element, bool value) where T : TextField { element.isReadOnly = value; return element; }
         public static T SetMaskChar<T>(this T element, char value) where T : TextField { element.maskChar = value; return element; }
         public static T SetText<T>(this T element, string value) where T : TextElement { element.text = value; return element; }
-        public static T SetTextWithDisplay<T>(this T element, string value) where T : TextElement => element.SetText(value).SetDisplay(!string.IsNullOrEmpty(value));
+        public static T SetTextWithDisplay<T>(this T element, string value) where T : TextElement { element.text = value; return element.SetDisplay(!string.IsNullOrEmpty(value)); }
         public static T SetEnableRichText<T>(this T element, bool value) where T : TextElement { element.enableRichText = value; return element; }
         public static T SetDisplayTooltipWhenElided<T>(this T element, bool displayTooltipWhenElided) where T : TextElement { element.displayTooltipWhenElided = displayTooltipWhenElided; return element; }
         public static T SetParseEscapeSequences<T>(this T element, bool parseEscapeSequences) where T : TextElement { element.parseEscapeSequences = parseEscapeSequences; return element; }
