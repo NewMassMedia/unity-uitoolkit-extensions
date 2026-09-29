@@ -21,6 +21,11 @@ namespace Core.UI.Extensions
         public static T SetIsPassword<T>(this T element, bool value) where T : TextField { element.isPasswordField = value; return element; }
         public static T SetIsReadonly<T>(this T element, bool value) where T : TextField { element.isReadOnly = value; return element; }
         public static T SetMaskChar<T>(this T element, char value) where T : TextField { element.maskChar = value; return element; }
+        // Unity 6000.6 added instance TextElement.SetText overloads; a string converts to ReadOnlySpan<char>, so
+        // label.SetText("x") binds to Unity's void method and never reaches this extension. That method also warns
+        // when the element is not attached to a panel yet. SetTextValue has no Unity counterpart and always lands here.
+        public static T SetTextValue<T>(this T element, string value) where T : TextElement { element.text = value; return element; }
+        [System.Obsolete("Unity 6000.6+ binds label.SetText(string) to TextElement.SetText(ReadOnlySpan<char>), not this extension. Use SetTextValue.")]
         public static T SetText<T>(this T element, string value) where T : TextElement { element.text = value; return element; }
         public static T SetTextWithDisplay<T>(this T element, string value) where T : TextElement { element.text = value; return element.SetDisplay(!string.IsNullOrEmpty(value)); }
         public static T SetEnableRichText<T>(this T element, bool value) where T : TextElement { element.enableRichText = value; return element; }
