@@ -2,6 +2,15 @@
 
 All notable changes to `com.maemi.unity-uitoolkit-extensions`. Versions match the `vX.Y.Z` git tags.
 
+## [0.1.14] - 2026-11-05
+
+### Fixed
+
+- `Tween` measured elapsed time with `Time.unscaledTime`, which does not advance in Edit Mode, so a tween in an
+  EditorWindow (a foundation `Sonner` toast sliding in) stayed at its first frame. It now measures
+  `Time.realtimeSinceStartupAsDouble`. Play Mode timing is unchanged except that a paused game no longer
+  freezes UI tweens.
+
 ## [0.1.13] - 2026-09-30
 
 ### Fixed

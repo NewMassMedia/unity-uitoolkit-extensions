@@ -46,11 +46,12 @@ namespace Core.UI.Extensions
             this T e, float durationMs, Func<float, float> easing,
             Action<float> onUpdate, Action onComplete = null) where T : VisualElement
         {
-            float startTime = Time.unscaledTime * 1000f;
+            // Real time, not Time.unscaledTime: that one stays still in Edit Mode, so a tween in an EditorWindow never moved.
+            double startTime = Time.realtimeSinceStartupAsDouble * 1000d;
             IVisualElementScheduledItem item = null;
             item = e.schedule.Execute(() =>
             {
-                float elapsed = Time.unscaledTime * 1000f - startTime;
+                float elapsed = (float)(Time.realtimeSinceStartupAsDouble * 1000d - startTime);
                 float t = Mathf.Clamp01(elapsed / durationMs);
                 onUpdate(easing(t));
                 if (t >= 1f)
