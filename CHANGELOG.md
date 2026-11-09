@@ -2,6 +2,19 @@
 
 All notable changes to `com.maemi.unity-uitoolkit-extensions`. Versions match the `vX.Y.Z` git tags.
 
+## [0.1.16] - 2026-11-09
+
+No runtime change.
+
+### Tests
+
+- `SlideOutTo`, the close of a Sheet or Drawer, is now tested against a child's own `translate` transition ending while
+  it runs: the child's end does not complete it, its own end does. The run's handlers listen bubble-up, where a child's
+  transition events arrive, and only the element's own events end it (since 0.1.15); the test fails if that check is
+  removed. Up to 0.1.14 the handler listened trickle-down, where a child's end did not arrive either.
+- `FadeOut_CompletesOnItsOwnTransitionEnd` failed now and then in full runs: its 50 ms fade could end before the test
+  registered its observer. The observer now listens on the parent, before the fade starts.
+
 ## [0.1.15] - 2026-11-09
 
 ### Fixed

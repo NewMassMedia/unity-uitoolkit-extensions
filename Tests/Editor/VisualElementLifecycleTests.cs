@@ -18,6 +18,7 @@ namespace Core.UI.Extensions.Tests
         private const int NEVER_ATTACHED_COUNT = 100;
 
         private static readonly StylePropertyName OPACITY = new("opacity");
+        private static readonly StylePropertyName TRANSLATE = new("translate");
 
         private sealed class HostWindow : EditorWindow { }
 
@@ -65,9 +66,9 @@ namespace Core.UI.Extensions.Tests
             int atOwnEnd = -1;
 
             element.FadeOut(duration: 0.05f, onComplete: () => completed++);
-            yield return WaitUntil(() => element.style.transitionProperty.keyword == StyleKeyword.Undefined);
-            // Registered after the run's handler, so it runs after it.
-            element.RegisterCallback<TransitionEndEvent>(evt => { if (evt.target == element) atOwnEnd = completed; });
+            // On the parent, bubble-up: runs after the element's own handlers. Registered before the fade starts, so a
+            // short fade cannot end before the observer exists.
+            Root.RegisterCallback<TransitionEndEvent>(evt => { if (evt.target == element) atOwnEnd = completed; });
             yield return WaitUntil(() => atOwnEnd >= 0);
 
             Assert.AreEqual(1, atOwnEnd, "onComplete waited for the fallback instead of the element's own TransitionEnd");
@@ -120,6 +121,41 @@ namespace Core.UI.Extensions.Tests
 
             element.SetTransitionProperty(StyleKeyword.Null).SetTransitionDuration(StyleKeyword.Null);
             yield return WaitUntil(() => completed > 0);
+            Assert.AreEqual(1, completed);
+        }
+
+        // B239: a Sheet or Drawer closes with SlideOutTo; a child's own translate transition (a row sliding in) ending
+        // while the close runs must not complete it.
+        [UnityTest]
+        public IEnumerator SlideOutTo_IgnoresAChildsTranslateEnd_AndCompletesOnItsOwnEnd()
+        {
+            var element = AddBox();
+            var child = new VisualElement();
+            child.SetWidth(10f).SetHeight(10f);
+            child.SetTransitionProperty(new List<StylePropertyName> { TRANSLATE })
+                .SetTransitionDuration(new List<TimeValue> { new(0.05f) });
+            element.Add(child);
+            yield return Frames(3);
+            int childEnds = 0;
+            element.RegisterCallback<TransitionEndEvent>(evt => { if (evt.target == child) childEnds++; });
+            int completed = 0;
+            int atOwnEnd = -1;
+
+            element.SlideOutTo(SlideDirection.Right, duration: 1f, onComplete: () => completed++);
+            // On the parent, bubble-up: runs after the element's own handlers.
+            Root.RegisterCallback<TransitionEndEvent>(evt =>
+            {
+                if (evt.target == element && evt.stylePropertyNames.Contains(TRANSLATE)) atOwnEnd = completed;
+            });
+            yield return WaitUntil(() => element.style.transitionProperty.keyword == StyleKeyword.Undefined);
+            child.SetTranslate(new Vector2(5f, 0f));
+            yield return WaitUntil(() => childEnds > 0);
+
+            Assert.AreEqual(0, completed, "a child's translate end completed the parent's slide-out");
+
+            yield return WaitUntil(() => atOwnEnd >= 0);
+            yield return Frames(5);
+            Assert.AreEqual(1, atOwnEnd, "onComplete did not run on the element's own translate end");
             Assert.AreEqual(1, completed);
         }
 
