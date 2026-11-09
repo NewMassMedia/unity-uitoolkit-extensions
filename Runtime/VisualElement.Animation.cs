@@ -33,9 +33,36 @@ namespace Core.UI.Extensions
     {
         #region Lifecycle
 
+        // Runs the callback once, on the next GeometryChangedEvent or on the scheduler tick after the element's next
+        // repaint, whichever comes first. WHY: the event comes only when the layout rect changes, so an element already
+        // laid out at its final size (re-attached, re-opened) never saw one. A repaint always follows a layout pass, in
+        // the editor too, where the scheduler ticks apart from layout.
         public static void AfterLayout<T>(this T e, Action callback) where T : VisualElement
         {
-            e.RegisterCallbackOnce<GeometryChangedEvent>(_ => callback());
+            bool isDone = false;
+            bool isPainted = false;
+
+            void Run()
+            {
+                if (isDone) return;
+                isDone = true;
+                e.RemoveCallback(OnGeometryChanged, TrickleDown.NoTrickleDown);
+                e.generateVisualContent -= OnPaint;
+                callback();
+            }
+
+            void OnGeometryChanged(GeometryChangedEvent _) => Run();
+
+            void OnPaint(MeshGenerationContext _)
+            {
+                if (isPainted) return;
+                isPainted = true;
+                e.schedule.Execute(Run);
+            }
+
+            e.Callback(OnGeometryChanged, TrickleDown.NoTrickleDown);
+            e.generateVisualContent += OnPaint;
+            e.MarkDirtyRepaint();
         }
 
         #endregion Lifecycle
@@ -72,7 +99,7 @@ namespace Core.UI.Extensions
         {
             return e.schedule.Execute(() =>
             {
-                e.EnableClass(className, !e.ClassListContains(className));
+                e.ToggleClass(className);
             }).StartingIn(0).Every(intervalMs);
         }
 

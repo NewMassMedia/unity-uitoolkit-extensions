@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -57,6 +58,10 @@ namespace Core.UI.Extensions
             };
         }
 
+        private const long TRANSITION_FALLBACK_MARGIN_MS = 100;
+
+        private static readonly ConditionalWeakTable<VisualElement, TransitionRun> s_transitionRuns = new();
+
         public static VisualElement FadeIn(this VisualElement element, float duration = 0.3f,
             float delay = 0f, EasingMode easing = EasingMode.EaseOut)
         {
@@ -64,6 +69,7 @@ namespace Core.UI.Extensions
 
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.OpacityProperty, duration, null);
                 ApplyTransition(
                     element,
                     TransitionCache.OpacityProperties,
@@ -71,6 +77,7 @@ namespace Core.UI.Extensions
                     GetUniformEasings(easing, EasingMode.EaseOut, TransitionCache.EaseOut, 1));
 
                 element.SetOpacity(1);
+                run.Begin();
             });
 
             return element;
@@ -81,18 +88,15 @@ namespace Core.UI.Extensions
         {
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.OpacityProperty, duration, onComplete);
                 ApplyTransition(
                     element,
                     TransitionCache.OpacityProperties,
                     GetDurations(duration),
                     GetUniformEasings(easing, EasingMode.EaseIn, TransitionCache.EaseIn, 1));
 
-                if (onComplete != null)
-                {
-                    RegisterTransitionEnd(element, TransitionCache.OpacityProperty, onComplete);
-                }
-
                 element.SetOpacity(0);
+                run.Begin();
             });
 
             return element;
@@ -107,6 +111,7 @@ namespace Core.UI.Extensions
 
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.TranslateProperty, duration, null);
                 ApplyTransition(
                     element,
                     TransitionCache.TranslateAndOpacityProperties,
@@ -114,6 +119,7 @@ namespace Core.UI.Extensions
                     GetUniformEasings(easing, EasingMode.EaseOut, TransitionCache.EaseOutx2, 2));
 
                 element.SetTranslate(Vector2.zero).SetOpacity(1);
+                run.Begin();
             });
 
             return element;
@@ -127,18 +133,15 @@ namespace Core.UI.Extensions
 
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.TranslateProperty, duration, onComplete);
                 ApplyTransition(
                     element,
                     TransitionCache.TranslateAndOpacityProperties,
                     GetDurations(duration, 2),
                     GetUniformEasings(easing, EasingMode.EaseIn, TransitionCache.EaseInx2, 2));
 
-                if (onComplete != null)
-                {
-                    RegisterTransitionEnd(element, TransitionCache.TranslateProperty, onComplete);
-                }
-
                 element.SetTranslate(offset).SetOpacity(0);
+                run.Begin();
             });
 
             return element;
@@ -151,6 +154,7 @@ namespace Core.UI.Extensions
 
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.ScaleProperty, duration, null);
                 ApplyTransition(
                     element,
                     TransitionCache.ScaleAndOpacityProperties,
@@ -162,6 +166,7 @@ namespace Core.UI.Extensions
                         TransitionCache.EaseOutBackAndOut));
 
                 element.SetScale(Vector2.one).SetOpacity(1);
+                run.Begin();
             });
 
             return element;
@@ -173,6 +178,7 @@ namespace Core.UI.Extensions
         {
             ScheduleTransition(element, delay, () =>
             {
+                TransitionRun run = TrackTransition(element, TransitionCache.ScaleProperty, duration, onComplete);
                 ApplyTransition(
                     element,
                     TransitionCache.ScaleAndOpacityProperties,
@@ -183,12 +189,8 @@ namespace Core.UI.Extensions
                         EasingMode.EaseIn,
                         TransitionCache.EaseInBackAndIn));
 
-                if (onComplete != null)
-                {
-                    RegisterTransitionEnd(element, TransitionCache.ScaleProperty, onComplete);
-                }
-
                 element.SetScale(new Vector2(to, to)).SetOpacity(0);
+                run.Begin();
             });
 
             return element;
@@ -277,30 +279,122 @@ namespace Core.UI.Extensions
             };
         }
 
-        private static void RegisterTransitionEnd(VisualElement element, StylePropertyName property, Action callback)
+        // One run per element: the latest Fade/Slide/Scale owns the inline transition it wrote. The run ends once, on
+        // the element's own end or cancel of `property` after its own TransitionRunEvent, on detach, or after the
+        // duration plus a margin when no transition event comes (duration 0, the value already at its target). Ending clears the inline transition so
+        // the element's USS transitions apply again, then calls onComplete. A newer run on the element replaces this
+        // one: its onComplete is dropped and its inline transition is left to the newer run.
+        private static TransitionRun TrackTransition(VisualElement element, StylePropertyName property, float duration,
+            Action onComplete)
         {
-            void Cleanup()
+            if (s_transitionRuns.TryGetValue(element, out TransitionRun previous))
             {
-                element.RemoveCallback(OnEnd)
-                    .RemoveCallback(OnCancel);
+                s_transitionRuns.Remove(element);
+                previous.Stop();
             }
 
-            void OnEnd(TransitionEndEvent evt)
-            {
-                if (!evt.stylePropertyNames.Contains(property)) return;
+            var run = new TransitionRun(element, property, duration, onComplete);
+            s_transitionRuns.Add(element, run);
+            run.Listen();
+            return run;
+        }
 
-                Cleanup();
-                callback();
+        private sealed class TransitionRun
+        {
+            private readonly VisualElement _element;
+            private readonly StylePropertyName _property;
+            private readonly float _duration;
+            private readonly long _fallbackMs;
+            private Action _onComplete;
+            private IVisualElementScheduledItem _fallback;
+            private bool _isRunning;
+
+            internal TransitionRun(VisualElement element, StylePropertyName property, float duration, Action onComplete)
+            {
+                _element = element;
+                _property = property;
+                _duration = duration;
+                _fallbackMs = ToDelayMilliseconds(Mathf.Max(0f, duration)) + TRANSITION_FALLBACK_MARGIN_MS;
+                _onComplete = onComplete;
             }
 
-            void OnCancel(TransitionCancelEvent _)
+            // Before the values are written: the TransitionRunEvent of a transition reaches only the handlers that
+            // were registered when the value changed.
+            internal void Listen()
             {
-                Cleanup();
-                callback();
+                _element.RegisterCallback<TransitionRunEvent>(OnRun, TrickleDown.NoTrickleDown);
+                _element.Callback(OnEnd, TrickleDown.NoTrickleDown)
+                    .Callback(OnCancel, TrickleDown.NoTrickleDown)
+                    .Callback(OnDetach, TrickleDown.NoTrickleDown);
             }
 
-            element.Callback(OnEnd)
-                .Callback(OnCancel);
+            // After the values are written.
+            internal void Begin()
+            {
+                _fallback = _element.schedule.Execute(End).StartingIn(_fallbackMs);
+
+                // No transition runs at duration 0. The inline transition is still cleared only at the fallback, after
+                // the margin, so a USS transition does not animate the jump that was just written.
+                if (_duration <= 0f) InvokeOnComplete();
+            }
+
+            internal void Stop()
+            {
+                _element.UnregisterCallback<TransitionRunEvent>(OnRun, TrickleDown.NoTrickleDown);
+                _element.RemoveCallback(OnEnd, TrickleDown.NoTrickleDown)
+                    .RemoveCallback(OnCancel, TrickleDown.NoTrickleDown)
+                    .RemoveCallback(OnDetach, TrickleDown.NoTrickleDown);
+                _fallback?.Pause();
+                _onComplete = null;
+            }
+
+            // WHY: writing a new value while a transition runs (FadeOut during a FadeIn) cancels the running one, and
+            // that cancel arrives after this run started listening. Only an end or cancel that follows this run's own
+            // TransitionRunEvent belongs to it; without one the fallback ends the run. The fallback restarts from the
+            // run event, so a transition that starts a slow frame late is not cut short.
+            private void OnRun(TransitionRunEvent evt)
+            {
+                if (_isRunning || !IsOwnProperty(evt.target, evt.stylePropertyNames)) return;
+
+                _isRunning = true;
+                _fallback?.ExecuteLater(_fallbackMs);
+            }
+
+            private void OnEnd(TransitionEndEvent evt)
+            {
+                if (_isRunning && IsOwnProperty(evt.target, evt.stylePropertyNames)) End();
+            }
+
+            private void OnCancel(TransitionCancelEvent evt)
+            {
+                if (_isRunning && IsOwnProperty(evt.target, evt.stylePropertyNames)) End();
+            }
+
+            private void OnDetach(DetachFromPanelEvent _) => End();
+
+            // A descendant's transition events (a button's hover fade) bubble up to these handlers too.
+            private bool IsOwnProperty(IEventHandler target, StylePropertyNameCollection names)
+                => target == _element && names.Contains(_property);
+
+            private void End()
+            {
+                if (!s_transitionRuns.TryGetValue(_element, out TransitionRun current) || current != this) return;
+
+                s_transitionRuns.Remove(_element);
+                Action onComplete = _onComplete;
+                Stop();
+                _element.SetTransitionProperty(StyleKeyword.Null)
+                    .SetTransitionDuration(StyleKeyword.Null)
+                    .SetTransitionTimingFunction(StyleKeyword.Null);
+                onComplete?.Invoke();
+            }
+
+            private void InvokeOnComplete()
+            {
+                Action onComplete = _onComplete;
+                _onComplete = null;
+                onComplete?.Invoke();
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,35 +10,24 @@ namespace Core.UI.Extensions
     {
         #region Dashed Border
 
-        private static readonly Dictionary<VisualElement, Action<MeshGenerationContext>> _dashedBorderHandlers = new();
-        private static readonly Dictionary<VisualElement, EventCallback<DetachFromPanelEvent>> _dashedBorderCleanupHandlers = new();
+        // Weak keys: an element configured and never attached, or dropped, does not stay alive through this table.
+        // The handler stays across detach and re-attach (generateVisualContent only runs while attached), so a
+        // reparented element keeps its border.
+        private static readonly ConditionalWeakTable<VisualElement, Action<MeshGenerationContext>> s_dashedBorderHandlers = new();
 
         public static T SetDashedBorder<T>(this T e, bool enable) where T : VisualElement
         {
-            if (enable)
+            bool isOn = s_dashedBorderHandlers.TryGetValue(e, out Action<MeshGenerationContext> handler);
+            if (enable && !isOn)
             {
-                if (!_dashedBorderHandlers.ContainsKey(e))
-                {
-                    void handler(MeshGenerationContext ctx) => RenderDashedBorder(e, ctx);
-                    EventCallback<DetachFromPanelEvent> cleanup = _ => e.SetDashedBorder(false);
-
-                    _dashedBorderHandlers[e] = handler;
-                    _dashedBorderCleanupHandlers[e] = cleanup;
-
-                    e.generateVisualContent += handler;
-                    e.RegisterCallback(cleanup);
-                }
+                handler = ctx => RenderDashedBorder(e, ctx);
+                s_dashedBorderHandlers.Add(e, handler);
+                e.generateVisualContent += handler;
             }
-            else if (_dashedBorderHandlers.TryGetValue(e, out var handler))
+            else if (!enable && isOn)
             {
                 e.generateVisualContent -= handler;
-                _dashedBorderHandlers.Remove(e);
-
-                if (_dashedBorderCleanupHandlers.TryGetValue(e, out var cleanup))
-                {
-                    e.UnregisterCallback(cleanup);
-                    _dashedBorderCleanupHandlers.Remove(e);
-                }
+                s_dashedBorderHandlers.Remove(e);
             }
 
             e.MarkDirtyRepaint();
@@ -148,66 +138,100 @@ namespace Core.UI.Extensions
 
         #region Gradient Background
 
-        private static readonly Dictionary<VisualElement, Texture2D> _gradientTextures = new();
-        private static readonly Dictionary<VisualElement, EventCallback<DetachFromPanelEvent>> _gradientCleanupHandlers = new();
+        private const int GRADIENT_HEIGHT = 64;
+
+        // The gradient stays on across detach and re-attach until ClearGradientBackground. Its texture exists only
+        // while the element is attached: built on attach, destroyed on detach, so a dropped element leaks none.
+        private static readonly ConditionalWeakTable<VisualElement, GradientState> s_gradients = new();
+
+        private sealed class GradientState
+        {
+            internal Color From;
+            internal Color To;
+            internal Texture2D Texture;
+        }
 
         public static T SetGradientBackground<T>(this T e, Color from, Color to) where T : VisualElement
         {
-            ClearGradientBackground(e);
-
-            const int HEIGHT = 64;
-            var tex = new Texture2D(1, HEIGHT, TextureFormat.RGBA32, false)
+            if (!s_gradients.TryGetValue(e, out GradientState state))
             {
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-            };
-
-            var pixels = new Color[HEIGHT];
-            for (int y = 0; y < HEIGHT; y++)
-            {
-                float t = (float)y / (HEIGHT - 1);
-                pixels[y] = Color.Lerp(from, to, t);
+                state = new GradientState();
+                s_gradients.Add(e, state);
+                e.Callback(OnGradientAttach, TrickleDown.NoTrickleDown)
+                    .Callback(OnGradientDetach, TrickleDown.NoTrickleDown);
             }
 
-            tex.SetPixels(pixels);
-            tex.Apply();
+            state.From = from;
+            state.To = to;
 
-            _gradientTextures[e] = tex;
-
-            if (!_gradientCleanupHandlers.ContainsKey(e))
-            {
-                EventCallback<DetachFromPanelEvent> cleanup = _ => e.ClearGradientBackground();
-                _gradientCleanupHandlers[e] = cleanup;
-                e.RegisterCallback(cleanup);
-            }
-
-            e.style.backgroundImage = new StyleBackground(tex);
             e.style.backgroundSize = new BackgroundSize(Length.Percent(100), Length.Percent(100));
             e.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Center);
             e.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Center);
+            if (e.panel != null) ApplyGradientTexture(e, state);
 
             return e;
         }
 
         public static T ClearGradientBackground<T>(this T e) where T : VisualElement
         {
-            if (_gradientTextures.TryGetValue(e, out var tex))
-            {
-                e.style.backgroundImage = StyleKeyword.None;
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(tex);
-                else
-                    UnityEngine.Object.DestroyImmediate(tex);
-                _gradientTextures.Remove(e);
-            }
+            if (!s_gradients.TryGetValue(e, out GradientState state)) return e;
 
-            if (_gradientCleanupHandlers.TryGetValue(e, out var cleanup))
-            {
-                e.UnregisterCallback(cleanup);
-                _gradientCleanupHandlers.Remove(e);
-            }
+            s_gradients.Remove(e);
+            e.RemoveCallback(OnGradientAttach, TrickleDown.NoTrickleDown)
+                .RemoveCallback(OnGradientDetach, TrickleDown.NoTrickleDown);
+            DestroyGradientTexture(state);
 
+            e.style.backgroundImage = StyleKeyword.Null;
+            e.style.backgroundSize = StyleKeyword.Null;
+            e.style.backgroundPositionX = StyleKeyword.Null;
+            e.style.backgroundPositionY = StyleKeyword.Null;
             return e;
+        }
+
+        private static void OnGradientAttach(AttachToPanelEvent evt)
+        {
+            var e = (VisualElement)evt.currentTarget;
+            if (s_gradients.TryGetValue(e, out GradientState state)) ApplyGradientTexture(e, state);
+        }
+
+        private static void OnGradientDetach(DetachFromPanelEvent evt)
+        {
+            var e = (VisualElement)evt.currentTarget;
+            if (s_gradients.TryGetValue(e, out GradientState state)) DestroyGradientTexture(state);
+        }
+
+        private static void ApplyGradientTexture(VisualElement e, GradientState state)
+        {
+            if (state.Texture == null)
+            {
+                state.Texture = new Texture2D(1, GRADIENT_HEIGHT, TextureFormat.RGBA32, false)
+                {
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear,
+                };
+            }
+
+            var pixels = new Color[GRADIENT_HEIGHT];
+            for (int y = 0; y < GRADIENT_HEIGHT; y++)
+            {
+                float t = (float)y / (GRADIENT_HEIGHT - 1);
+                pixels[y] = Color.Lerp(state.From, state.To, t);
+            }
+
+            state.Texture.SetPixels(pixels);
+            state.Texture.Apply();
+            e.style.backgroundImage = new StyleBackground(state.Texture);
+        }
+
+        private static void DestroyGradientTexture(GradientState state)
+        {
+            if (state.Texture == null) return;
+
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(state.Texture);
+            else
+                UnityEngine.Object.DestroyImmediate(state.Texture);
+            state.Texture = null;
         }
 
         #endregion Gradient Background

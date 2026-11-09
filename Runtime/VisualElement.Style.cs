@@ -40,15 +40,7 @@ namespace Core.UI.Extensions
         }
 
         public static T SetPickingModeRecursive<T>(this T element, bool mode) where T : VisualElement
-        {
-            element.SetPickingMode(mode);
-            foreach (VisualElement child in element.hierarchy.Children())
-            {
-                child.SetPickingModeRecursive(mode);
-            }
-
-            return element;
-        }
+            => element.SetPickingModeRecursive(mode ? PickingMode.Position : PickingMode.Ignore);
 
         public static T SetPickingMode<T>(this T element, PickingMode mode) where T : VisualElement { element.pickingMode = mode; return element; }
         public static T SetPickingMode<T>(this T element, bool mode) where T : VisualElement { element.pickingMode = mode ? PickingMode.Position : PickingMode.Ignore; return element; }

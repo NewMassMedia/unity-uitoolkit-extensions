@@ -24,7 +24,13 @@ namespace Core.UI.Extensions
     {
         public static float GetOpacity<T>(this T element) where T : VisualElement => element.style.opacity.value;
         public static T SetOpacity<T>(this T element, float value) where T : VisualElement { element.style.opacity = value; return element; }
-        public static T ToggleDisplay<T>(this T element) where T : VisualElement { element.style.display = element.style.display == DisplayStyle.None ? DisplayStyle.Flex : DisplayStyle.None; return element; }
+        public static T ToggleDisplay<T>(this T element) where T : VisualElement
+        {
+            StyleEnum<DisplayStyle> inline = element.style.display;
+            DisplayStyle current = inline.keyword == StyleKeyword.Undefined ? inline.value : element.resolvedStyle.display;
+            element.style.display = current == DisplayStyle.None ? DisplayStyle.Flex : DisplayStyle.None;
+            return element;
+        }
         public static DisplayStyle GetDisplay<T>(this T element) where T : VisualElement => element.style.display.value;
         public static T SetDisplay<T>(this T element, DisplayStyle value) where T : VisualElement { element.style.display = value; return element; }
         public static T SetDisplay<T>(this T element, bool value) where T : VisualElement { element.style.display = value ? DisplayStyle.Flex : DisplayStyle.None; return element; }

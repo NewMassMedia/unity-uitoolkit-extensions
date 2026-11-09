@@ -9,10 +9,7 @@ namespace Core.UI.Extensions
         public static void RemoveAllChildren(this VisualElement element)
         {
             if (element == null) return;
-            while (element.childCount > 0)
-            {
-                element.RemoveAt(0);
-            }
+            element.Clear();
         }
 
         public static T AddChild<T, U>(this T root, U child) where T : VisualElement where U : VisualElement
@@ -36,7 +33,7 @@ namespace Core.UI.Extensions
         public static void Destroy<T>(this T element) where T : VisualElement
         {
             if (element == null) return;
-            element.parent?.Remove(element);
+            element.RemoveFromHierarchy();
         }
     }
 }

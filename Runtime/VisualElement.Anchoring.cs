@@ -43,16 +43,28 @@ namespace Core.UI.Extensions
             return new AnchoredPlacement(new Vector2(left, top), side);
         }
 
-        // Position THIS element anchored at a panel-space point, using its resolved size and the panel rect as bounds.
-        // Call after layout (the element needs a real resolvedStyle size). For a tail-less floating UI (tooltip /
-        // dropdown / menu); a callout that must also move a tail consumes ResolveAnchoredPlacement directly.
+        // Position THIS absolutely positioned element anchored at a panel-space point, using its resolved size and the
+        // panel rect as bounds; left/top are written in its parent's space, so the parent may sit anywhere. Call after
+        // layout (the element needs a real resolvedStyle size). For a tail-less floating UI (tooltip / dropdown /
+        // menu); a callout that must also move a tail consumes ResolveAnchoredPlacement directly.
         public static T PlaceAnchored<T>(this T element, Vector2 anchorPanelPoint, Side preferredSide,
                                          float sideOffset, float edgeMargin) where T : VisualElement
         {
             Vector2 size = new(element.resolvedStyle.width, element.resolvedStyle.height);
             AnchoredPlacement p = ResolveAnchoredPlacement(element.GetRootBound(), anchorPanelPoint, size,
                                                            preferredSide, sideOffset, edgeMargin);
-            return element.SetLeft(p.TopLeft.x).SetTop(p.TopLeft.y);
+            Vector2 topLeft = PanelToParentOffset(element.parent, p.TopLeft);
+            return element.SetLeft(topLeft.x).SetTop(topLeft.y);
+        }
+
+        // left/top of an absolute child count from the parent's inner border edge, not its layout origin.
+        private static Vector2 PanelToParentOffset(VisualElement parent, Vector2 panelPoint)
+        {
+            if (parent == null) return panelPoint;
+
+            Vector2 local = parent.WorldToLocal(panelPoint);
+            IResolvedStyle style = parent.resolvedStyle;
+            return local - new Vector2(style.borderLeftWidth, style.borderTopWidth);
         }
 
         // Flip only when the preferred side overflows AND the opposite side has more room, so content larger than
