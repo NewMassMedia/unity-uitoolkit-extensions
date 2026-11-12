@@ -2,6 +2,16 @@
 
 All notable changes to `com.maemi.unity-uitoolkit-extensions`. Versions match the `vX.Y.Z` git tags.
 
+## [0.1.17] - 2026-11-12
+
+### Added
+
+- `Callback` / `RemoveCallback` overloads for the drag-and-drop events: `DragEnterEvent`, `DragLeaveEvent`,
+  `DragUpdatedEvent`, `DragPerformEvent` and `DragExitedEvent`. A drop target (a material tile that takes an asset dragged
+  from the Project window) had to call `RegisterCallback` raw. Enter and leave default to `NoTrickleDown` like the pointer
+  enter/leave overloads, since they trickle down through every ancestor; the other three default to `TrickleDown` like
+  every other event.
+
 ## [0.1.16] - 2026-11-09
 
 No runtime change.

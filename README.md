@@ -31,7 +31,7 @@ except the enter/leave overloads, which default to `TrickleDown.NoTrickleDown` s
 
 | Overloads | Default |
 |---|---|
-| `MouseEnterEvent`, `MouseLeaveEvent`, `PointerEnterEvent`, `PointerLeaveEvent` | `NoTrickleDown` (at target) |
+| `MouseEnterEvent`, `MouseLeaveEvent`, `PointerEnterEvent`, `PointerLeaveEvent`, `DragEnterEvent`, `DragLeaveEvent` (since 0.1.17) | `NoTrickleDown` (at target) |
 | every other event | `TrickleDown` |
 
 Why: enter/leave events do not bubble, but they trickle down through every ancestor of the element that was
